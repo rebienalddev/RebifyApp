@@ -1,0 +1,4 @@
+# Security: Ignore configuration files containing secrets
+config.js
+.env
+node_modules

@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rebify - Flash Cards</title>
+    <style>
+        /* --- CSS Variables and Global Styles (Black & White Theme) --- */
+        :root {
+            --primary-pink: #000000; 
+            --primary-dark: #000000; 
+            --heading-color: #000000; 
+            --bg-light: #f4f4f4; 
+            --bg-lighter: #ffffff; 
+            --text-color: #000000; 
+            --border-color: #000000; 
+            --success-color: #00b894; 
+            --error-color: #ff6b81; 
+            --white: #ffffff;
+            --shadow-lg: 4px 4px 0px 0px rgba(0, 0, 0, 0.3); 
+            --shadow-sm: 2px 2px 0px 0px rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-light);
+            padding: 0;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+
+        /* --- Layout & Structure --- */
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            padding: 1.5rem;
+            background-color: var(--bg-lighter);
+            border: 3px solid var(--primary-dark);
+            box-shadow: var(--shadow-lg);
+        }
+
+        main {
+            background-color: var(--bg-lighter);
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-lg);
+        }
+        
+        @media (min-width: 640px) {
+            main {
+                padding: 2.5rem;
+            }
+        }
+
+        /* --- Typography --- */
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 900;
+            color: var(--primary-dark);
+            line-height: 1.2;
+            text-shadow: 1px 1px 0 var(--border-color);
+        }
+
+        h2 {
+            font-size: 1.875rem;
+            font-weight: 800;
+            color: var(--heading-color);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--primary-pink);
+        }
+
+        /* --- Forms & Inputs --- */
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 0.5rem;
+        }
+
+        .input-field,
+        select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid var(--primary-dark);
+            box-shadow: var(--shadow-sm);
+            background-color: var(--white);
+            color: var(--text-color);
+            resize: none;
+            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+            box-sizing: border-box; 
+        }
+        
+        .input-field:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--primary-pink);
+            box-shadow: 0 0 0 2px var(--primary-pink);
+        }
+        
+        .input-field[disabled] {
+            background-color: var(--bg-light);
+            opacity: 0.8;
+            cursor: not-allowed;
+            box-shadow: none;
+            border: 1px solid var(--border-color);
+        }
+        
+        /* File Upload */
+        .custom-file-upload input[type="file"] {
+            display: none;
+        }
+
+        .upload-btn-style {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            background-color: var(--bg-light); 
+            color: var(--primary-dark);
+            padding: 0.75rem 1rem;
+            width: 100%; 
+            border: 2px solid var(--primary-dark);
+            box-shadow: var(--shadow-sm);
+            justify-content: flex-start;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.1s;
+            box-sizing: border-box;
+        }
+        
+        .upload-btn-style:hover {
+            background-color: #e0e0e0;
+            box-shadow: 3px 3px 0px 0px var(--primary-dark);
+            transform: translate(-1px, -1px);
+        }
+
+        /* --- Buttons --- */
+        .btn {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            border: none;
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--white);
+            cursor: pointer;
+            transition: all 0.1s;
+            border: 2px solid var(--primary-dark);
+            box-shadow: 3px 3px 0px 0px var(--primary-dark);
+        }
+        
+        .btn:hover {
+            transform: translate(-1px, -1px);
+            box-shadow: 4px 4px 0px 0px var(--primary-dark);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-pink);
+        }
+
+        .btn-primary:hover {
+            background-color: #333333;
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-light);
+            color: var(--primary-dark);
+            border: 1px solid var(--primary-dark);
+            box-shadow: 2px 2px 0px 0px var(--primary-dark);
+            font-size: 0.875rem;
+            padding: 0.5rem 1.5rem;
+        }
+        
+        .btn-secondary:hover {
+            background-color: #e0e0e0;
+            transform: translate(-1px, -1px);
+            box-shadow: 3px 3px 0px 0px var(--primary-dark);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none !important;
+            border: 1px solid #9ca3af;
+        }
+
+        /* --- Flashcard Specific Styles --- */
+        .flashcard-container {
+            perspective: 1000px;
+            width: 100%;
+            height: 400px; /* Fixed height for the card area */
+            cursor: pointer;
+            margin-bottom: 1.5rem;
+        }
+
+        .flashcard-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            box-shadow: var(--shadow-lg);
+            border: 3px solid var(--primary-dark);
+            background-color: var(--white);
+        }
+
+        .flashcard-container.flipped .flashcard-inner {
+            transform: rotateY(180deg);
+        }
+
+        .flashcard-front, .flashcard-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        .flashcard-front {
+            background-color: var(--white);
+            color: var(--primary-dark);
+        }
+
+        .flashcard-back {
+            background-color: var(--bg-light);
+            color: var(--primary-dark);
+            transform: rotateY(180deg);
+            border: 4px solid var(--primary-pink); /* Inner border to distinguish back */
+        }
+
+        .card-label {
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #666;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+
+        .card-content {
+            font-size: 1.5rem;
+            font-weight: 600;
+            line-height: 1.5;
+            overflow-y: auto;
+            max-height: 100%;
+            width: 100%;
+        }
+
+        .instruction-text {
+            text-align: center;
+            color: #666;
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+            font-style: italic;
+        }
+
+        /* --- Sidebar Navigation --- */
+        .app-layout {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+        }
+
+        .sidebar {
+            width: 260px;
+            background-color: var(--bg-lighter);
+            border-right: 3px solid var(--primary-dark);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand {
+            font-size: 1.75rem;
+            font-weight: 900;
+            color: var(--primary-dark);
+            margin-bottom: 2.5rem;
+            text-transform: uppercase;
+            letter-spacing: -0.05em;
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .nav-item {
+            width: 100%;
+            text-align: left;
+            padding: 1rem;
+            background: transparent;
+            border: 2px solid transparent;
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: var(--text-color);
+            cursor: pointer;
+            transition: all 0.2s;
+            box-sizing: border-box;
+        }
+
+        .nav-item:hover {
+            background-color: var(--bg-light);
+            border-color: var(--primary-dark);
+            box-shadow: var(--shadow-sm);
+            transform: translate(-2px, -2px);
+        }
+
+        .nav-item.active {
+            background-color: var(--primary-dark);
+            color: var(--white);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary-dark);
+        }
+
+        .main-content-wrapper {
+            flex: 1;
+            height: 100%;
+            overflow-y: auto;
+            padding: 2rem;
+        }
+        
+        /* Hamburger Button */
+        .hamburger-btn {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--primary-dark);
+            padding: 0.5rem;
+            margin-right: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .app-layout {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 3px solid var(--primary-dark);
+                padding: 1rem;
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                position: relative;
+                z-index: 50;
+            }
+            .sidebar-brand {
+                margin-bottom: 0;
+                font-size: 1.5rem;
+            }
+            .hamburger-btn {
+                display: block;
+            }
+            .nav-menu {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                width: 100%;
+                background-color: var(--bg-lighter);
+                border-bottom: 3px solid var(--primary-dark);
+                flex-direction: column;
+                padding: 1rem;
+                box-shadow: var(--shadow-lg);
+                box-sizing: border-box;
+                gap: 1rem;
+            }
+            .nav-menu.show {
+                display: flex;
+            }
+            .nav-item {
+                padding: 1rem;
+                font-size: 1rem;
+                text-align: center;
+            }
+            .main-content-wrapper {
+                height: 100%;
+                padding: 1rem;
+            }
+        }
+
+        /* --- Loading Spinner --- */
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 20rem;
+        }
+        
+        .spinner {
+            animation: spin 1s linear infinite;
+            height: 2.5rem;
+            width: 2.5rem;
+            color: var(--primary-pink);
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <div class="app-layout">
+        <nav class="sidebar">
+            <div class="sidebar-brand">
+                Reb Dev
+            </div>
+            <button class="hamburger-btn" id="mobile-menu-btn" aria-label="Toggle menu">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+            <ul class="nav-menu">
+                <li><button class="nav-item" onclick="window.location.href='index.html'">1. Multiple Items</button></li>
+                <li><button class="nav-item active" onclick="location.reload()">2. Flash Card</button></li>
+                <li><button class="nav-item" onclick="window.location.href='identification.html'">3. Identification</button></li>
+            </ul>
+        </nav>
+        
+        <div class="main-content-wrapper">
+            <div class="container">
+                <header>
+                    <h1 class="leading-tight">Rebify</h1>
+                </header>
+                
+                <main id="app-main">
+                    <!-- Content will be rendered here by JavaScript -->
+                </main>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script type="module">
+        import { apiKey } from './config.js';
+        const MODEL_NAME = 'gemini-1.5-flash';
+
+        // --- Anti-Inspection Logic ---
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.addEventListener('keydown', event => {
+            if (
+                event.key === 'F12' ||
+                (event.ctrlKey && event.shiftKey && (event.key === 'I' || event.key === 'J' || event.key === 'C')) ||
+                (event.ctrlKey && event.key === 'u')
+            ) {
+                event.preventDefault();
+            }
+        });
+
+        // --- Mobile Menu Logic ---
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const navMenu = document.querySelector('.nav-menu');
+        if (mobileMenuBtn) {
+            mobileMenuBtn.addEventListener('click', () => {
+                navMenu.classList.toggle('show');
+            });
+        }
+
+        let fileContentText = '';
+        let fileDataBase64 = null;
+        let fileMimeType = null;
+        let pdfFileName = '';
+        
+        let config = {
+            numCards: 10,
+            difficulty: 'Medium'
+        };
+
+        let appStatus = 'config'; // 'config', 'loading', 'study'
+        let flashcards = [];
+        let currentCardIndex = 0;
+        let isFlipped = false;
+        let loadingMessage = '';
+        let error = null;
+        
+        const mainElement = document.getElementById('app-main');
+
+        async function fetchWithRetry(url, options, maxRetries = 3) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    return response;
+                } catch (error) {
+                    if (i === maxRetries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
+                }
+            }
+        }
+
+        async function generateFlashcards() {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
+
+            const systemPrompt = `You are an expert tutor creating study flashcards.
+            INSTRUCTIONS:
+            1. Generate ${config.numCards} flashcards based on the provided CONTENT.
+            2. Difficulty: ${config.difficulty}.
+            3. Output MUST be a JSON array of objects.
+            4. Each object must have "front" (term/question) and "back" (definition/answer).
+            5. Keep "front" concise. Keep "back" clear and explanatory.
+            `;
+
+            const responseSchema = {
+                type: "ARRAY",
+                items: {
+                    type: "OBJECT",
+                    properties: {
+                        "front": { "type": "STRING" },
+                        "back": { "type": "STRING" }
+                    }
+                }
+            };
+            
+            let contentsParts = [];
+            let userQueryBase = `Generate ${config.numCards} flashcards based on this content:`;
+
+            if (fileDataBase64 && fileMimeType) {
+                contentsParts.push({ text: userQueryBase });
+                contentsParts.push({ inlineData: { mimeType: fileMimeType, data: fileDataBase64 } });
+            } else if (fileContentText.trim()) {
+                contentsParts.push({ text: `${userQueryBase} "${fileContentText.substring(0, 5000)}"` });
+            } else {
+                throw new Error("No content provided.");
+            }
+
+            const payload = {
+                contents: [{ parts: contentsParts }],
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                generationConfig: { responseMimeType: "application/json", responseSchema: responseSchema }
+            };
+
+            const response = await fetchWithRetry(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            
+            const result = await response.json();
+            const jsonString = result.candidates[0].content.parts[0].text;
+            return JSON.parse(jsonString);
+        }
+
+        function renderApp() {
+            if (appStatus === 'config') renderConfig();
+            else if (appStatus === 'loading') renderLoading();
+            else if (appStatus === 'study') renderStudy();
+        }
+
+        function renderConfig() {
+            const contentReady = (fileDataBase64 && pdfFileName) || fileContentText.trim().length > 0;
+            
+            mainElement.innerHTML = `
+                <div class="space-y-6">
+                    <h2>1. Upload Content</h2>
+                    <div class="input-group">
+                        <label>Upload PDF / Text File</label>
+                        <div class="custom-file-upload">
+                            <input type="file" id="pdfFile" accept=".pdf, .txt" />
+                            <label for="pdfFile" class="upload-btn-style">
+                                <span>${pdfFileName || 'Choose File...'}</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Pasted Content</label>
+                        <textarea id="quizText" rows="6" class="input-field" placeholder="Paste notes here..." ${(fileDataBase64) ? 'disabled' : ''}>${fileContentText}</textarea>
+                    </div>
+
+                    <h2>2. Configure Flashcards</h2>
+                    <div class="input-group">
+                        <label>Number of Cards</label>
+                        <select id="numCards" class="input-field">
+                            ${[5, 10, 15, 20].map(n => `<option value="${n}" ${config.numCards === n ? 'selected' : ''}>${n}</option>`).join('')}
+                        </select>
+                    </div>
+                    
+                    <button id="generateBtn" class="btn btn-primary" style="width: 100%; margin-top: 1rem;" ${contentReady ? '' : 'disabled'}>Generate Flashcards</button>
+                    ${error ? `<p style="color: var(--error-color); margin-top: 1rem;">${error}</p>` : ''}
+                </div>
+            `;
+
+            document.getElementById('pdfFile').addEventListener('change', handleFileChange);
+            document.getElementById('quizText').addEventListener('input', (e) => {
+                fileContentText = e.target.value;
+                fileDataBase64 = null; pdfFileName = '';
+                renderApp();
+            });
+            document.getElementById('numCards').addEventListener('change', (e) => config.numCards = parseInt(e.target.value));
+            document.getElementById('generateBtn').addEventListener('click', handleGenerate);
+        }
+
+        function renderLoading() {
+            mainElement.innerHTML = `
+                <div class="loading-container">
+                    <svg class="spinner" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none" opacity="0.25"></circle><path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" opacity="0.75"></path></svg>
+                    <p style="margin-top: 1rem; font-weight: 600;">${loadingMessage}</p>
+                </div>
+            `;
+        }
+
+        function renderStudy() {
+            const card = flashcards[currentCardIndex];
+            
+            mainElement.innerHTML = `
+                <div style="text-align: center;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <span style="font-weight: 700;">Card ${currentCardIndex + 1} / ${flashcards.length}</span>
+                        <button id="resetBtn" class="btn btn-secondary" style="padding: 0.25rem 0.75rem; font-size: 0.75rem;">New Set</button>
+                    </div>
+
+                    <p class="instruction-text">Click the card to flip</p>
+
+                    <div class="flashcard-container ${isFlipped ? 'flipped' : ''}" id="flashcard">
+                        <div class="flashcard-inner">
+                            <div class="flashcard-front">
+                                <div class="card-label">Term / Question</div>
+                                <div class="card-content">${card.front}</div>
+                            </div>
+                            <div class="flashcard-back">
+                                <div class="card-label">Definition / Answer</div>
+                                <div class="card-content">${card.back}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; margin-top: 1.5rem;">
+                        <button id="prevBtn" class="btn btn-secondary" ${currentCardIndex === 0 ? 'disabled' : ''}>← Previous</button>
+                        <button id="nextBtn" class="btn btn-primary" ${currentCardIndex === flashcards.length - 1 ? 'disabled' : ''}>Next →</button>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('flashcard').addEventListener('click', () => {
+                isFlipped = !isFlipped;
+                renderApp();
+            });
+            
+            document.getElementById('prevBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (currentCardIndex > 0) {
+                    currentCardIndex--;
+                    isFlipped = false;
+                    renderApp();
+                }
+            });
+
+            document.getElementById('nextBtn').addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (currentCardIndex < flashcards.length - 1) {
+                    currentCardIndex++;
+                    isFlipped = false;
+                    renderApp();
+                }
+            });
+
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                appStatus = 'config';
+                flashcards = [];
+                renderApp();
+            });
+        }
+
+        function handleFileChange(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (file.size > 4 * 1024 * 1024) {
+                error = "File too large (Max 4MB).";
+                renderApp();
+                return;
+            }
+
+            pdfFileName = file.name;
+            fileMimeType = file.type;
+            loadingMessage = "Reading file...";
+            appStatus = 'loading';
+            renderApp();
+
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    fileDataBase64 = btoa(new Uint8Array(evt.target.result).reduce((d, b) => d + String.fromCharCode(b), ''));
+                    appStatus = 'config';
+                    error = null;
+                } catch (err) { error = "Encoding failed."; appStatus = 'config'; }
+                renderApp();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function handleGenerate() {
+            loadingMessage = "Generating flashcards with AI...";
+            appStatus = 'loading';
+            error = null;
+            renderApp();
+
+            try {
+                flashcards = await generateFlashcards();
+                currentCardIndex = 0;
+                isFlipped = false;
+                appStatus = 'study';
+            } catch (err) {
+                console.error(err);
+                error = "Failed to generate cards. Try again.";
+                appStatus = 'config';
+            }
+            renderApp();
+        }
+
+        renderApp();
+    </script>
+</body>
+</html>
+```
