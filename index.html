@@ -568,7 +568,7 @@
                 // Fallback: Check localStorage
                 apiKey = localStorage.getItem('rebify_key');
                 if (!apiKey) {
-                    apiKey = prompt("Config.js not found (as expected on GitHub). Please the password to use Rebify:");
+                    apiKey = prompt("Please input the password to use Rebify:");
                     if (apiKey) localStorage.setItem('rebify_key', apiKey);
                 }
             }
