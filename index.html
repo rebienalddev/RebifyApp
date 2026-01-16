@@ -523,8 +523,8 @@
     <div class="app-layout">
         <nav class="sidebar">
             <div class="sidebar-brand">
-                REB DEV
-            </div>
+                Reb Dev
+                </div>
             <button class="hamburger-btn" id="mobile-menu-btn" aria-label="Toggle menu">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
@@ -544,41 +544,53 @@
                 </header>
                 
                 <main id="app-main">
-                    <div style="padding: 2rem; text-align: center;">Initializing Rebify...</div>
-                </main>
+                    </main>
             </div>
         </div>
     </div>
 
     <script type="module">
-        // --- API KEY HANDLING (FIXED) ---
+        // --- API Key Handling (FIXED FOR GITHUB) ---
         let apiKey = '';
+
+        async function loadApiKey() {
+            try {
+                // Try to import from config.js
+                const config = await import('./config.js');
+                apiKey = config.apiKey;
+            } catch (err) {
+                // Fallback: Check localStorage
+                apiKey = localStorage.getItem('rebify_key');
+                if (!apiKey) {
+                    apiKey = prompt("Config.js not found (as expected on GitHub). Please the password to use Rebify:");
+                    if (apiKey) localStorage.setItem('rebify_key', apiKey);
+                }
+            }
+            initApp();
+        }
+
+        // --- Global Constants ---
         const MODEL_NAME = 'gemini-2.5-flash';
 
-        async function startRebify() {
-            try {
-                // Try dynamic import (won't crash if missing)
-                const config = await import('./config.js').catch(() => ({ apiKey: null }));
-                
-                if (config.apiKey) {
-                    apiKey = config.apiKey;
-                } else {
-                    // Fallback to localStorage
-                    apiKey = localStorage.getItem('rebify_api_key');
-                    if (!apiKey) {
-                        apiKey = prompt("API configuration missing. Please enter your Gemini API Key:");
-                        if (apiKey) localStorage.setItem('rebify_api_key', apiKey);
-                    }
-                }
-
-                if (apiKey) {
-                    initApp();
-                } else {
-                    document.getElementById('app-main').innerHTML = "<p style='color:red; padding:2rem;'>API Key required to load content.</p>";
-                }
-            } catch (err) {
-                console.error("Init Error:", err);
+        // --- Anti-Inspection Logic ---
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.addEventListener('keydown', event => {
+            if (
+                event.key === 'F12' ||
+                (event.ctrlKey && event.shiftKey && (event.key === 'I' || event.key === 'J' || event.key === 'C')) ||
+                (event.ctrlKey && event.key === 'u')
+            ) {
+                event.preventDefault();
             }
+        });
+
+        // --- Mobile Menu Logic ---
+        const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+        const navMenu = document.querySelector('.nav-menu');
+        if (mobileMenuBtn) {
+            mobileMenuBtn.addEventListener('click', () => {
+                navMenu.classList.toggle('show');
+            });
         }
 
         // --- Application State ---
@@ -607,28 +619,30 @@
 
         // --- Utility Functions ---
         function generateUUID() {
-             return 'xxxx-xxxx-4xxx-yxxx-xxxx'.replace(/[xy]/g, c => {
+             return 'xxxx-xxxx-4xxx-yxxx-xxxx'.replace(/[xy]/g, function(c) {
                  var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
                  return v.toString(16);
              });
         }
 
-        async function fetchWithRetry(url, options, maxRetries = 3) {
+        async function fetchWithRetry(url, options, maxRetries = 5) {
             for (let i = 0; i < maxRetries; i++) {
                 try {
                     const response = await fetch(url, options);
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     return response;
                 } catch (error) {
-                    if (i === maxRetries - 1) throw error;
-                    await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
+                    if (i < maxRetries - 1) {
+                        const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    } else { throw error; }
                 }
             }
         }
 
         async function generateQuizContent() {
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
-            const systemPrompt = `Analyze content and generate a JSON array of ${quizConfig.numQuestions} quiz questions. JSON format only.`;
+            const systemPrompt = `You are a Quiz Master. Generate a JSON array of ${quizConfig.numQuestions} objects. JSON ONLY.`;
             const responseSchema = {
                 type: "ARRAY",
                 items: {
@@ -644,9 +658,9 @@
             
             let contentsParts = [];
             if (fileDataBase64) {
-                contentsParts.push({ text: "Quiz Source File:" }, { inlineData: { mimeType: fileMimeType, data: fileDataBase64 } });
+                contentsParts.push({ text: "Quiz based on this file:" }, { inlineData: { mimeType: fileMimeType, data: fileDataBase64 } });
             } else {
-                contentsParts.push({ text: `Quiz Source Text: ${fileContentText.substring(0, 5000)}` });
+                contentsParts.push({ text: `Quiz based on: ${fileContentText.substring(0, 5000)}` });
             }
 
             const payload = {
@@ -660,7 +674,7 @@
             return JSON.parse(result.candidates[0].content.parts[0].text);
         }
 
-        async function generateFeedback(correctCount, totalQuestions) {
+        async function generateFeedback(correctCount, totalQuestions, finalAnswers) {
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
             const userQuery = `Score: ${correctCount}/${totalQuestions}. Give short encouragement.`;
             const payload = { contents: [{ role: "user", parts: [{ text: userQuery }] }] };
@@ -669,7 +683,7 @@
             return result.candidates[0].content.parts[0].text;
         }
 
-        // --- Core UI Logic ---
+        // --- Screen Renderers ---
         function renderApp() {
             switch (quizStatus) {
                 case 'config': renderConfigScreen(); break;
@@ -685,16 +699,16 @@
                 <div class="space-y-6">
                     <h2>1. Upload Content</h2>
                     <div class="input-group">
-                        <label>Upload PDF / Text File</label>
+                        <label for="pdfFile">Upload PDF / Text File</label>
                         <div class="custom-file-upload">
                             <input type="file" id="pdfFile" accept=".pdf, .txt" />
-                            <label for="pdfFile" class="upload-btn-style">
+                            <label for="pdfFile" id="fileInputLabel" class="upload-btn-style">
                                 📁 <span id="uploadFileName">${pdfFileName || 'Choose File...'}</span>
                             </label>
                         </div>
                     </div>
                     <div class="input-group">
-                        <label>Pasted Content (Max 5000 chars)</label>
+                        <label for="quizText">Pasted Content</label>
                         <textarea id="quizText" rows="8" class="input-field">${fileContentText}</textarea>
                     </div>
                     <h2>2. Configure Quiz</h2>
@@ -712,7 +726,16 @@
                     ${error ? `<div style="color:red; margin-top:10px">${error}</div>` : ''}
                 </div>
             `;
-            document.getElementById('quizText').addEventListener('input', e => { fileContentText = e.target.value; renderApp(); });
+            document.getElementById('quizText').addEventListener('input', (e) => { 
+                fileContentText = e.target.value; 
+                // Fix: Update button state directly instead of re-rendering the whole app
+                const btn = document.getElementById('generateQuizButton');
+                if (fileContentText.trim() || fileDataBase64) {
+                    btn.removeAttribute('disabled');
+                } else {
+                    btn.setAttribute('disabled', 'true');
+                }
+            });
             document.getElementById('pdfFile').addEventListener('change', handleFileChange);
             document.getElementById('generateQuizButton').addEventListener('click', handleGenerateQuiz);
         }
@@ -728,7 +751,7 @@
                     <div class="quiz-header"><p>Question ${currentQuestionIndex + 1} of ${questions.length}</p></div>
                     <div class="quiz-question-box"><p>${q.question}</p></div>
                     <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                        ${q.options.map(opt => `<button class="quiz-option ${userAnswers[currentQuestionIndex] === opt ? 'selected' : ''}" onclick="window.selectAnswer('${opt.replace(/'/g, "\\'")}')">${opt}</button>`).join('')}
+                        ${q.options.map(opt => `<button class="quiz-option ${userAnswers[currentQuestionIndex] === opt ? 'selected' : ''}" onclick="window.selectAnswer('${opt}')">${opt}</button>`).join('')}
                     </div>
                     <div class="quiz-nav">
                         <button class="btn btn-secondary" onclick="window.prevQ()">Previous</button>
@@ -751,14 +774,14 @@
             `;
         }
 
-        // Global functions
-        window.selectAnswer = ans => { userAnswers[currentQuestionIndex] = ans; renderApp(); };
+        // Global functions for buttons
+        window.selectAnswer = (ans) => { userAnswers[currentQuestionIndex] = ans; renderApp(); };
         window.nextQ = () => { if(currentQuestionIndex < questions.length - 1) currentQuestionIndex++; renderApp(); };
         window.prevQ = () => { if(currentQuestionIndex > 0) currentQuestionIndex--; renderApp(); };
         window.submitQuiz = async () => {
-            quizStatus = 'loading'; loadingMessage = 'Checking results...'; renderApp();
+            quizStatus = 'loading'; loadingMessage = 'Checking...'; renderApp();
             score = questions.filter((q, i) => userAnswers[i] === q.answer).length;
-            feedback = await generateFeedback(score, questions.length);
+            feedback = await generateFeedback(score, questions.length, userAnswers);
             quizStatus = 'results'; renderApp();
         };
 
@@ -767,8 +790,8 @@
             if (!file) return;
             pdfFileName = file.name;
             const reader = new FileReader();
-            reader.onload = ev => {
-                fileDataBase64 = btoa(new Uint8Array(ev.target.result).reduce((d, b) => d + String.fromCharCode(b), ''));
+            reader.onload = (ev) => {
+                fileDataBase64 = btoa(new Uint8Array(ev.target.result).reduce((data, b) => data + String.fromCharCode(b), ''));
                 fileMimeType = file.type;
                 renderApp();
             };
@@ -776,17 +799,22 @@
         }
 
         async function handleGenerateQuiz() {
-            quizStatus = 'loading'; loadingMessage = 'AI Generating Quiz...'; renderApp();
+            if (!apiKey) {
+                apiKey = prompt("Please enter your Gemini API Key to continue:");
+                if (apiKey) localStorage.setItem('rebify_key', apiKey);
+                else return;
+            }
+            quizStatus = 'loading'; loadingMessage = 'Generating...'; renderApp();
             try {
                 questions = await generateQuizContent();
                 userAnswers = new Array(questions.length).fill(null);
                 quizStatus = 'quiz';
-            } catch (e) { error = "AI generation failed. Check your key."; quizStatus = 'config'; }
+            } catch (e) { error = "Error generating quiz."; quizStatus = 'config'; }
             renderApp();
         }
 
         function initApp() { userId = generateUUID(); renderApp(); }
-        window.addEventListener('load', startRebify);
+        window.addEventListener('load', loadApiKey);
     </script>
 </body>
 </html>

@@ -584,7 +584,19 @@
 
     <!-- JavaScript Logic -->
     <script type="module">
-        import { apiKey } from './config.js';
+        // --- API Key Handling ---
+        let apiKey = '';
+
+        async function loadApiKey() {
+            try {
+                const config = await import('./config.js');
+                apiKey = config.apiKey;
+            } catch (err) {
+                apiKey = localStorage.getItem('rebify_key');
+            }
+            initApp();
+        }
+
         // --- Global Constants ---
         const MODEL_NAME = 'gemini-2.5-flash';
 
@@ -1117,13 +1129,23 @@
 
         function handleTextChange(e) {
             fileContentText = e.target.value;
-            // Clear file data if user starts typing manually
             fileDataBase64 = null; 
             fileMimeType = null;
             pdfFileName = '';
 
             document.getElementById('charCount').textContent = `${fileContentText.length} / 5000`;
-            renderApp();
+            
+            // Update UI directly to avoid re-render loop
+            const btn = document.getElementById('generateQuizButton');
+            const sourceDisplay = document.getElementById('contentSourceDisplay');
+            
+            if (fileContentText.trim()) {
+                btn.removeAttribute('disabled');
+                if (sourceDisplay) sourceDisplay.textContent = `Content Source: Pasted text (${fileContentText.length} chars). Ready to generate.`;
+            } else {
+                btn.setAttribute('disabled', 'true');
+                if (sourceDisplay) sourceDisplay.textContent = `Content Source: None. Upload a file or paste text below.`;
+            }
         }
 
         function handleFileChange(e) {
@@ -1214,6 +1236,11 @@
         }
 
         async function handleGenerateQuiz() {
+            if (!apiKey) {
+                apiKey = prompt("Please enter your Gemini API Key to continue:");
+                if (apiKey) localStorage.setItem('rebify_key', apiKey);
+                else return;
+            }
             // Check if generation button should be enabled based on current state
             const isContentReady = fileContentText.trim() || (fileDataBase64 && fileMimeType);
 
@@ -1341,7 +1368,7 @@
             renderApp(); // Initial render of the config screen
         }
 
-        window.addEventListener('load', initApp);
+        window.addEventListener('load', loadApiKey);
     </script>
 </body>
 </html>

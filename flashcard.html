@@ -460,7 +460,19 @@
 
     <!-- JavaScript Logic -->
     <script type="module">
-        import { apiKey } from './config.js';
+        // --- API Key Handling ---
+        let apiKey = '';
+
+        async function loadApiKey() {
+            try {
+                const config = await import('./config.js');
+                apiKey = config.apiKey;
+            } catch (err) {
+                apiKey = localStorage.getItem('rebify_key');
+            }
+            renderApp();
+        }
+
         const MODEL_NAME = 'gemini-2.5-flash';
 
         // --- Anti-Inspection Logic ---
@@ -611,7 +623,13 @@
             document.getElementById('quizText').addEventListener('input', (e) => {
                 fileContentText = e.target.value;
                 fileDataBase64 = null; pdfFileName = '';
-                renderApp();
+                
+                const btn = document.getElementById('generateBtn');
+                if (fileContentText.trim()) {
+                    btn.removeAttribute('disabled');
+                } else {
+                    btn.setAttribute('disabled', 'true');
+                }
             });
             document.getElementById('numCards').addEventListener('change', (e) => config.numCards = parseInt(e.target.value));
             document.getElementById('generateBtn').addEventListener('click', handleGenerate);
@@ -717,6 +735,11 @@
         }
 
         async function handleGenerate() {
+            if (!apiKey) {
+                apiKey = prompt("Please enter your Gemini API Key to continue:");
+                if (apiKey) localStorage.setItem('rebify_key', apiKey);
+                else return;
+            }
             loadingMessage = "Generating flashcards with AI...";
             appStatus = 'loading';
             error = null;
@@ -735,7 +758,7 @@
             renderApp();
         }
 
-        renderApp();
+        loadApiKey();
     </script>
 </body>
 </html>
