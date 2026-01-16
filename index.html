@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rebify</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         /* --- CSS Variables and Global Styles (Black & White Theme) --- */
         :root {
@@ -29,6 +32,10 @@
             margin: 0;
             height: 100vh;
             overflow: hidden;
+        }
+
+        input, button, textarea, select {
+            font-family: inherit;
         }
 
         .container {
@@ -524,23 +531,22 @@
         <nav class="sidebar">
             <div class="sidebar-brand">
                 Reb Dev
-                </div>
+            </div>
             <button class="hamburger-btn" id="mobile-menu-btn" aria-label="Toggle menu">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
             <ul class="nav-menu">
-                <li><button class="nav-item active" onclick="location.reload()">1. Multiple Items</button></li>
-                <li><button class="nav-item" onclick="window.location.href='flashcard.html'">2. Flash Card</button></li>
+                <li><button class="nav-item active" onclick="location.reload()">1. Multiple Choice</button></li>
+                <li><button class="nav-item" onclick="window.location.href='flashcard.html'">2. Flashcards</button></li>
                 <li><button class="nav-item" onclick="window.location.href='identification.html'">3. Identification</button></li>
+    <li><button class="nav-item" onclick="window.location.href='https://rebienalddev.github.io/Portfolio/'">4. Owner's Portfolio</button></li>
             </ul>
         </nav>
         
         <div class="main-content-wrapper">
             <div class="container">
                 <header>
-                    <h1 class="leading-tight">
-                    Rebify
-                    </h1>
+                    <h1 class="leading-tight">Rebify</h1>
                 </header>
                 
                 <main id="app-main">
@@ -703,7 +709,13 @@
                         <div class="custom-file-upload">
                             <input type="file" id="pdfFile" accept=".pdf, .txt" />
                             <label for="pdfFile" id="fileInputLabel" class="upload-btn-style">
-                                📁 <span id="uploadFileName">${pdfFileName || 'Choose File...'}</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" style="height: 1.25rem; width: 1.25rem;">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="12" y1="12" x2="12" y2="18"></line>
+                                    <line x1="9" y1="15" x2="15" y2="15"></line>
+                                </svg>
+                                <span id="uploadFileName">${pdfFileName || 'Choose File...'}</span>
                             </label>
                         </div>
                     </div>

@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rebify - Identification</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         /* --- CSS Variables and Global Styles (Black & White Theme) --- */
         :root {
@@ -30,6 +33,10 @@
             margin: 0;
             height: 100vh;
             overflow: hidden;
+        }
+
+        input, button, textarea, select {
+            font-family: 'Inter', sans-serif;
         }
 
         .container {
@@ -560,19 +567,18 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
             </button>
             <ul class="nav-menu">
-                <li><button class="nav-item" onclick="window.location.href='index.html'">1. Multiple Items</button></li>
-                <li><button class="nav-item" onclick="window.location.href='flashcard.html'">2. Flash Card</button></li>
+                <li><button class="nav-item" onclick="window.location.href='index.html'">1. Multiple Choice</button></li>
+                <li><button class="nav-item" onclick="window.location.href='flashcard.html'">2. Flashcards</button></li>
                 <li><button class="nav-item active" onclick="location.reload()">3. Identification</button></li>
+                    <li><button class="nav-item" onclick="window.location.href='https://rebienalddev.github.io/Portfolio/'">4. Owner's Portfolio</button></li>
+
             </ul>
         </nav>
         
         <div class="main-content-wrapper">
             <div class="container">
                 <header>
-                    <h1 class="leading-tight">
-                    Rebify
-                    </h1>
-                   
+                    <h1 class="leading-tight">Rebify</h1>
                 </header>
                 
                 <main id="app-main">
@@ -832,7 +838,7 @@
                 contentSourceMessage = `Content Source: Pasted text (${fileContentText.length} chars). Ready to generate.`;
                 contentReady = true;
             } else {
-                contentSourceMessage = `Content Source: None. Upload a file or paste text below.`;
+                contentSourceMessage = ``;
                 contentReady = false;
             }
 
@@ -845,7 +851,6 @@
                             Upload PDF / Text File (Content Source)
                         </label>
                         <p style="font-size: 0.875rem; color: #4b5563; margin-bottom: 0.75rem;">
-                            Note: File upload is preferred for PDFs. Maximum file size is 4MB.
                         </p>
                         
                         <!-- Custom Styled File Input -->
@@ -874,7 +879,7 @@
                             id="quizText"
                             rows="8"
                             class="input-field"
-                            placeholder="Paste chapters, notes, or articles here. This content is used by the AI."
+                            placeholder=""
                             maxlength="5000"
                             ${(fileDataBase64 || pdfFileName) ? 'disabled' : ''}
                         >${fileContentText}</textarea>
