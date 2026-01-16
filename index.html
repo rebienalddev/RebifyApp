@@ -386,36 +386,6 @@
             margin-bottom: 0.5rem;
         }
         
-        /* --- Modal Styling --- */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.75);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 50;
-        }
-        
-        .modal-content {
-            background-color: var(--white);
-            padding: 1.5rem;
-            box-shadow: var(--shadow-lg);
-            max-width: 384px;
-            margin: 0 auto;
-            border: 2px solid var(--primary-dark);
-        }
-        
-        .modal-title {
-            font-size: 1.125rem;
-            font-weight: 700;
-            color: var(--primary-dark);
-            margin-bottom: 0.75rem;
-        }
-
         /* --- Sidebar Navigation --- */
         .app-layout {
             display: flex;
@@ -571,19 +541,34 @@
                     <h1 class="leading-tight">
                     Rebify
                     </h1>
-                   
                 </header>
                 
                 <main id="app-main">
-                    <!-- Content will be rendered here by JavaScript -->
-                </main>
+                    </main>
             </div>
         </div>
     </div>
 
-    <!-- JavaScript Logic -->
     <script type="module">
-        import { apiKey } from './config.js';
+        // --- API Key Handling (FIXED FOR GITHUB) ---
+        let apiKey = '';
+
+        async function loadApiKey() {
+            try {
+                // Try to import from config.js
+                const config = await import('./config.js');
+                apiKey = config.apiKey;
+            } catch (err) {
+                // Fallback: Check localStorage
+                apiKey = localStorage.getItem('rebify_key');
+                if (!apiKey) {
+                    apiKey = prompt("Config.js not found (as expected on GitHub). Please enter your Gemini API Key to use Rebify:");
+                    if (apiKey) localStorage.setItem('rebify_key', apiKey);
+                }
+            }
+            initApp();
+        }
+
         // --- Global Constants ---
         const MODEL_NAME = 'gemini-2.5-flash';
 
@@ -610,10 +595,10 @@
 
         // --- Application State ---
         let userId = null; 
-        let fileContentText = ''; // Manually pasted content
-        let fileDataBase64 = null; // Base64 content of uploaded file
-        let fileMimeType = null; // Mime type of uploaded file
-        let pdfFileName = ''; // Display name
+        let fileContentText = ''; 
+        let fileDataBase64 = null; 
+        let fileMimeType = null; 
+        let pdfFileName = ''; 
         
         let quizConfig = {
             numQuestions: 5,
@@ -621,7 +606,7 @@
             type: 'multiple-choice',
         };
 
-        let quizStatus = 'config'; // 'config', 'loading', 'quiz', 'results'
+        let quizStatus = 'config'; 
         let questions = [];
         let currentQuestionIndex = 0;
         let userAnswers = [];
@@ -633,10 +618,6 @@
         const mainElement = document.getElementById('app-main');
 
         // --- Utility Functions ---
-        
-        /**
-         * Simple UUID generator for user identification.
-         */
         function generateUUID() {
              return 'xxxx-xxxx-4xxx-yxxx-xxxx'.replace(/[xy]/g, function(c) {
                  var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
@@ -644,703 +625,182 @@
              });
         }
 
-        /**
-         * Retries a fetch request with exponential backoff.
-         */
         async function fetchWithRetry(url, options, maxRetries = 5) {
             for (let i = 0; i < maxRetries; i++) {
                 try {
                     const response = await fetch(url, options);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     return response;
                 } catch (error) {
                     if (i < maxRetries - 1) {
                         const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
                         await new Promise(resolve => setTimeout(resolve, delay));
-                    } else {
-                        console.error("Max retries reached. Failing request.", error);
-                        throw error;
-                    }
+                    } else { throw error; }
                 }
             }
         }
 
-        /**
-         * Calls the Gemini API for question generation.
-         */
         async function generateQuizContent() {
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
-
-            // *** REVISED SYSTEM PROMPT FOR BETTER QUALITY AND GROUNDING ***
-            const systemPrompt = `You are a highly analytical and extremely strict Quiz Master AI. Your primary task is to generate high-quality, relevant quiz questions and answers based *ONLY* on the provided CONTENT.
-
-            INSTRUCTIONS:
-            1. The questions MUST be directly derivable from the CONTENT provided in the user query. Do not use outside knowledge.
-            2. The output MUST be a JSON array of ${quizConfig.numQuestions} question objects, strictly matching the provided schema. Do NOT include any text outside the JSON block.
-            3. The difficulty must be ${quizConfig.difficulty}.
-            4. Question type is ${quizConfig.type}.
-            5. For 'multiple-choice', generate exactly 4 plausible options, with the correct answer being one of them. The correct answer must also be explicitly listed in the 'answer' field.
-            6. For 'identification' and 'enumeration', the 'options' field must be an empty array []. The 'answer' field MUST contain the single, most precise correct response (e.g., a short phrase or comma-separated list).
-            `;
-
+            const systemPrompt = `You are a Quiz Master. Generate a JSON array of ${quizConfig.numQuestions} objects. JSON ONLY.`;
             const responseSchema = {
                 type: "ARRAY",
                 items: {
                     type: "OBJECT",
                     properties: {
-                        "question": { "type": "STRING", "description": "The quiz question." },
-                        "options": { "type": "ARRAY", "items": { "type": "STRING" }, "description": "Exactly 4 options for multiple choice, empty array for others." },
-                        "answer": { "type": "STRING", "description": "The single, correct answer string." },
-                        "type": { "type": "STRING", "description": "The type of question (e.g., 'multiple-choice')." }
-                    },
-                    propertyOrdering: ["question", "options", "answer", "type"]
+                        "question": { "type": "STRING" },
+                        "options": { "type": "ARRAY", "items": { "type": "STRING" } },
+                        "answer": { "type": "STRING" },
+                        "type": { "type": "STRING" }
+                    }
                 }
             };
             
             let contentsParts = [];
-            let userQueryBase = `Generate a quiz with ${quizConfig.numQuestions} questions of ${quizConfig.difficulty} difficulty, and ${quizConfig.type} type, based on the following CONTENT:`;
-
-            if (fileDataBase64 && fileMimeType) {
-                // Multimodal input (PDF/file)
-                contentsParts.push({ text: userQueryBase });
-                contentsParts.push({
-                    inlineData: {
-                        mimeType: fileMimeType,
-                        data: fileDataBase64
-                    }
-                });
-            } else if (fileContentText.trim()) {
-                // Text input
-                contentsParts.push({ text: `${userQueryBase} "${fileContentText.substring(0, 5000)}"` });
+            if (fileDataBase64) {
+                contentsParts.push({ text: "Quiz based on this file:" }, { inlineData: { mimeType: fileMimeType, data: fileDataBase64 } });
             } else {
-                throw new Error("No content uploaded or pasted.");
+                contentsParts.push({ text: `Quiz based on: ${fileContentText.substring(0, 5000)}` });
             }
 
             const payload = {
                 contents: [{ parts: contentsParts }],
                 systemInstruction: { parts: [{ text: systemPrompt }] },
-                generationConfig: {
-                    responseMimeType: "application/json",
-                    responseSchema: responseSchema,
-                }
+                generationConfig: { responseMimeType: "application/json", responseSchema: responseSchema }
             };
 
-
-            const options = {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            };
-
-            const response = await fetchWithRetry(apiUrl, options);
+            const response = await fetchWithRetry(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             const result = await response.json();
-
-            if (result.candidates && result.candidates.length > 0 &&
-                result.candidates[0].content && result.candidates[0].content.parts &&
-                result.candidates[0].content.parts.length > 0) {
-                const jsonString = result.candidates[0].content.parts[0].text;
-                return JSON.parse(jsonString);
-            } else {
-                throw new Error("Failed to generate structured JSON response from AI.");
-            }
+            return JSON.parse(result.candidates[0].content.parts[0].text);
         }
 
-        /**
-         * Calls the Gemini API for final feedback generation.
-         */
         async function generateFeedback(correctCount, totalQuestions, finalAnswers) {
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${apiKey}`;
-
-            const systemPrompt = `You are a motivational and informative tutor. Based on the user's score and performance, provide concise, encouraging feedback and suggest one topic from the quiz content where the user could improve. Keep the response to 3-5 sentences.`;
-
-            const performanceDetails = questions.map((q, index) => ({
-                question: q.question,
-                userAnswer: finalAnswers[index],
-                correctAnswer: q.answer,
-                isCorrect: finalAnswers[index] === q.answer // Simple comparison for feedback context
-            }));
-
-            const userQuery = `The user scored ${correctCount} out of ${totalQuestions}. Provide feedback based on the following performance details:\n${JSON.stringify(performanceDetails, null, 2)}`;
-
-            const payload = {
-                contents: [{ role: "user", parts: [{ text: userQuery }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] }
-            };
-
-            const options = {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            };
-
-            const response = await fetchWithRetry(apiUrl, options);
+            const userQuery = `Score: ${correctCount}/${totalQuestions}. Give short encouragement.`;
+            const payload = { contents: [{ role: "user", parts: [{ text: userQuery }] }] };
+            const response = await fetchWithRetry(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             const result = await response.json();
-
-            return result.candidates?.[0]?.content?.parts?.[0]?.text || "Great job! Feedback generation failed, but your score speaks for itself.";
-        }
-
-        // --- Core Application Logic ---
-
-        /**
-         * Handles state changes and re-renders the UI.
-         */
-        function renderApp() {
-            // Note: userIdDisplay element removed per user request
-            
-            switch (quizStatus) {
-                case 'config':
-                    renderConfigScreen();
-                    break;
-                case 'loading':
-                    renderLoadingScreen();
-                    break;
-                case 'quiz':
-                    renderQuizScreen();
-                    break;
-                case 'results':
-                    renderResultsScreen();
-                    break;
-            }
+            return result.candidates[0].content.parts[0].text;
         }
 
         // --- Screen Renderers ---
+        function renderApp() {
+            switch (quizStatus) {
+                case 'config': renderConfigScreen(); break;
+                case 'loading': renderLoadingScreen(); break;
+                case 'quiz': renderQuizScreen(); break;
+                case 'results': renderResultsScreen(); break;
+            }
+        }
 
         function renderConfigScreen() {
-            // Determine the content source status for display
-            let contentSourceMessage = '';
-            let contentReady = false;
-
-            if (fileDataBase64 && pdfFileName) {
-                contentSourceMessage = `Content Source: Uploaded file (${pdfFileName}). Ready to generate.`;
-                contentReady = true;
-            } else if (fileContentText.trim()) {
-                contentSourceMessage = `Content Source: Pasted text (${fileContentText.length} chars). Ready to generate.`;
-                contentReady = true;
-            } else {
-                contentSourceMessage = `Content Source: None. Upload a file or paste text below.`;
-                contentReady = false;
-            }
-
+            let contentReady = fileDataBase64 || fileContentText.trim();
             mainElement.innerHTML = `
                 <div class="space-y-6">
                     <h2>1. Upload Content</h2>
-                    
                     <div class="input-group">
-                        <label for="pdfFile" style="font-size: 1.125rem;">
-                            Upload PDF / Text File (Content Source)
-                        </label>
-                        <p style="font-size: 0.875rem; color: #4b5563; margin-bottom: 0.75rem;">
-                            Note: File upload is preferred for PDFs. Maximum file size is 4MB.
-                        </p>
-                        
-                        <!-- Custom Styled File Input -->
+                        <label for="pdfFile">Upload PDF / Text File</label>
                         <div class="custom-file-upload">
                             <input type="file" id="pdfFile" accept=".pdf, .txt" />
                             <label for="pdfFile" id="fileInputLabel" class="upload-btn-style">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter" style="height: 1.25rem; width: 1.25rem;">
-                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                    <polyline points="14 2 14 8 20 8"></polyline>
-                                    <line x1="12" y1="12" x2="12" y2="18"></line>
-                                    <line x1="9" y1="15" x2="15" y2="15"></line>
-                                </svg>
-                                <span id="uploadFileName">${pdfFileName || 'Choose File...'}</span>
+                                📁 <span id="uploadFileName">${pdfFileName || 'Choose File...'}</span>
                             </label>
                         </div>
-                        <!-- End Custom Styled File Input -->
-
-                        <p id="contentSourceDisplay" style="margin-top: 0.5rem; font-size: 0.75rem; color: ${contentReady ? 'var(--success-color)' : 'var(--error-color)'}; font-weight: 600;">${contentSourceMessage}</p>
                     </div>
-
                     <div class="input-group">
-                        <label for="quizText" style="font-size: 1.125rem;">
-                            Pasted Content (Max 5000 chars)
-                        </label>
-                        <textarea
-                            id="quizText"
-                            rows="8"
-                            class="input-field"
-                            placeholder="Paste chapters, notes, or articles here. This content is used by the AI."
-                            maxlength="5000"
-                            ${(fileDataBase64 || pdfFileName) ? 'disabled' : ''}
-                        >${fileContentText}</textarea>
-                        <p id="charCount" style="text-align: right; font-size: 0.875rem; color: #6b7280; margin-top: 0.25rem;">${fileContentText.length} / 5000</p>
+                        <label for="quizText">Pasted Content</label>
+                        <textarea id="quizText" rows="8" class="input-field">${fileContentText}</textarea>
                     </div>
-
                     <h2>2. Configure Quiz</h2>
-                    
                     <div class="config-grid">
-                        <div class="input-group">
-                            <label for="numQuestions">
-                                Number of Questions
-                            </label>
-                            <select id="numQuestions" name="numQuestions">
-                                ${[3, 5, 10, 15].map(n => `<option value="${n}" ${quizConfig.numQuestions === n ? 'selected' : ''}>${n}</option>`).join('')}
-                            </select>
-                        </div>
-
-                        <div class="input-group">
-                            <label for="difficulty">
-                                Difficulty Level
-                            </label>
-                            <select id="difficulty" name="difficulty">
-                                ${['Easy', 'Medium', 'Hard', 'Expert'].map(d => `<option value="${d}" ${quizConfig.difficulty === d ? 'selected' : ''}>${d}</option>`).join('')}
-                            </select>
-                        </div>
+                        <select id="numQuestions" class="input-field">
+                            <option value="5" ${quizConfig.numQuestions == 5 ? 'selected' : ''}>5 Questions</option>
+                            <option value="10" ${quizConfig.numQuestions == 10 ? 'selected' : ''}>10 Questions</option>
+                        </select>
+                        <select id="difficulty" class="input-field">
+                            <option value="Medium" ${quizConfig.difficulty == 'Medium' ? 'selected' : ''}>Medium</option>
+                            <option value="Hard" ${quizConfig.difficulty == 'Hard' ? 'selected' : ''}>Hard</option>
+                        </select>
                     </div>
-                    
-                    <div style="padding-top: 1.5rem;">
-                         <button
-                            id="generateQuizButton"
-                            class="btn btn-primary"
-                            style="width: 100%;"
-                            ${contentReady ? '' : 'disabled'}
-                        >
-                            Generate Quiz
-                        </button>
-                    </div>
-                    ${error ? `<div style="padding: 0.75rem; margin-top: 1rem; background-color: #fee2e2; border: 1px solid #fca5a5; color: #991b1b; font-size: 0.875rem;">${error}</div>` : ''}
+                    <button id="generateQuizButton" class="btn btn-primary" style="width:100%; margin-top:2rem" ${contentReady ? '' : 'disabled'}>Generate Quiz</button>
+                    ${error ? `<div style="color:red; margin-top:10px">${error}</div>` : ''}
                 </div>
             `;
-
-            // Attach event listeners after rendering
-            document.getElementById('quizText').addEventListener('input', handleTextChange);
+            document.getElementById('quizText').addEventListener('input', (e) => { fileContentText = e.target.value; renderApp(); });
             document.getElementById('pdfFile').addEventListener('change', handleFileChange);
-            document.getElementById('numQuestions').addEventListener('change', handleConfigChange);
-            document.getElementById('difficulty').addEventListener('change', handleConfigChange);
             document.getElementById('generateQuizButton').addEventListener('click', handleGenerateQuiz);
         }
 
         function renderLoadingScreen() {
-            mainElement.innerHTML = `
-                <div class="loading-container">
-                    <svg class="spinner" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <p style="margin-top: 1rem; font-size: 1.25rem; font-weight: 500; color: var(--primary-dark);">${loadingMessage}</p>
-                    <p style="margin-top: 0.5rem; font-size: 0.875rem; color: var(--primary-pink);">This might take a few moments as the AI reads the content.</p>
-                </div>
-            `;
+            mainElement.innerHTML = `<div class="loading-container"><div class="spinner"></div><p>${loadingMessage}</p></div>`;
         }
 
         function renderQuizScreen() {
             const q = questions[currentQuestionIndex];
-            if (!q) {
-                mainElement.innerHTML = '<p>No questions loaded.</p>';
-                return;
-            }
-
-            const isMultipleChoice = q.type === 'multiple-choice';
-            const userAnswer = userAnswers[currentQuestionIndex];
-            const isLastQuestion = currentQuestionIndex === questions.length - 1;
-            const isAnswered = isMultipleChoice ? userAnswer !== null : (userAnswer && userAnswer.trim() !== '');
-
-            let answersHtml;
-            if (isMultipleChoice) {
-                answersHtml = `
-                    <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
-                        ${q.options.map((option, idx) => `
-                            <button
-                                data-answer="${option}"
-                                class="quiz-option ${userAnswer === option ? 'selected' : ''}"
-                            >
-                                ${option}
-                            </button>
-                        `).join('')}
-                    </div>
-                `;
-            } else {
-                answersHtml = `
-                    <textarea
-                        id="textAnswer"
-                        rows="4"
-                        class="input-field"
-                        style="margin-top: 1.5rem;"
-                        placeholder="${q.type === 'identification' ? 'Type your answer here...' : 'List your items separated by commas...'}"
-                    >${userAnswer || ''}</textarea>
-                `;
-            }
-
             mainElement.innerHTML = `
                 <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                    <div class="quiz-header">
-                        <p style="font-weight: 600; font-size: 1.125rem;">Question ${currentQuestionIndex + 1} of ${questions.length}</p>
-                        <p class="quiz-type-tag">${q.type.replace('-', ' ')}</p>
+                    <div class="quiz-header"><p>Question ${currentQuestionIndex + 1} of ${questions.length}</p></div>
+                    <div class="quiz-question-box"><p>${q.question}</p></div>
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        ${q.options.map(opt => `<button class="quiz-option ${userAnswers[currentQuestionIndex] === opt ? 'selected' : ''}" onclick="window.selectAnswer('${opt}')">${opt}</button>`).join('')}
                     </div>
-
-                    <div class="quiz-question-box">
-                        <p>${q.question}</p>
-                    </div>
-
-                    ${answersHtml}
-
                     <div class="quiz-nav">
-                        <button
-                            id="prevButton"
-                            class="btn btn-secondary"
-                            style="font-size: 0.875rem; padding: 0.5rem 1.5rem;"
-                            ${currentQuestionIndex === 0 ? 'disabled' : ''}
-                        >
-                            ← Previous
-                        </button>
-                        
-                        ${isLastQuestion ? `
-                            <button
-                                id="submitButton"
-                                class="btn btn-success"
-                                style="font-size: 0.875rem; padding: 0.5rem 1.5rem; ${isAnswered ? '' : 'background-color: #9ca3af;'}"
-                                ${isAnswered ? '' : 'disabled'}
-                            >
-                                Submit Quiz
-                            </button>
-                        ` : `
-                            <button
-                                id="nextButton"
-                                class="btn btn-primary"
-                                style="font-size: 0.875rem; padding: 0.5rem 1.5rem; ${isAnswered ? '' : 'background-color: #fbcfe8;'}"
-                                ${isAnswered ? '' : 'disabled'}
-                            >
-                                Next Question →
-                            </button>
-                        `}
+                        <button class="btn btn-secondary" onclick="window.prevQ()">Previous</button>
+                        ${currentQuestionIndex === questions.length - 1 ? `<button class="btn btn-success" onclick="window.submitQuiz()">Submit</button>` : `<button class="btn btn-primary" onclick="window.nextQ()">Next</button>`}
                     </div>
                 </div>
             `;
-            
-            // Attach quiz event listeners
-            if (isMultipleChoice) {
-                mainElement.querySelectorAll('.quiz-option').forEach(btn => {
-                    btn.addEventListener('click', handleAnswerSelection);
-                });
-            } else {
-                const textAnswer = document.getElementById('textAnswer');
-                textAnswer.addEventListener('input', handleTextAnswerChange);
-                
-                // Logic to enable/disable button on text change
-                textAnswer.addEventListener('input', () => {
-                    const answerText = textAnswer.value;
-                    const isAnswered = answerText && answerText.trim() !== '';
-                    const nextBtn = document.getElementById('nextButton') || document.getElementById('submitButton');
-                    
-                    if (nextBtn) {
-                         if (isAnswered) {
-                            nextBtn.style.backgroundColor = isLastQuestion ? 'var(--success-color)' : 'var(--primary-pink)';
-                            nextBtn.removeAttribute('disabled');
-                        } else {
-                            nextBtn.style.backgroundColor = isLastQuestion ? '#9ca3af' : '#fbcfe8';
-                            nextBtn.setAttribute('disabled', 'disabled');
-                        }
-                    }
-                });
-            }
-
-            document.getElementById('prevButton').addEventListener('click', handlePreviousQuestion);
-            if (isLastQuestion) {
-                document.getElementById('submitButton').addEventListener('click', handleSubmitQuiz);
-            } else {
-                document.getElementById('nextButton').addEventListener('click', handleNextQuestion);
-            }
         }
 
         function renderResultsScreen() {
-            const totalQuestions = questions.length;
-            const percentage = ((score / totalQuestions) * 100).toFixed(0);
-
-            const getCorrectness = (q, userAnswer) => {
-                if (q.type === 'multiple-choice') {
-                    return userAnswer === q.answer;
-                }
-                // Simple check for other types (case-insensitive, trim)
-                return userAnswer?.toLowerCase().trim() === q.answer?.toLowerCase().trim();
-            };
-            
             mainElement.innerHTML = `
                 <div style="display: flex; flex-direction: column; gap: 2rem;">
                     <div class="results-summary">
-                        <h2 style="border-bottom: none; margin-bottom: 0;">Quiz Complete!</h2>
-                        <p class="results-score">${score} / ${totalQuestions}</p>
-                        <p style="font-size: 1.5rem; font-weight: 600; color: var(--primary-dark);">Your Score: ${percentage}%</p>
+                        <h2>Quiz Complete!</h2>
+                        <p class="results-score">${score} / ${questions.length}</p>
                     </div>
-
-                    <!-- Gemini Feedback -->
-                    <div class="feedback-box">
-                        <h3>
-                            <svg xmlns="http://www.w3.org/2000/svg" style="height: 1.5rem; width: 1.5rem; margin-right: 0.5rem; color: var(--primary-pink);" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                            </svg>
-                            Gemini AI Feedback
-                        </h3>
-                        <p style="color: #4b5563; white-space: pre-wrap;">${feedback}</p>
-                    </div>
-
-                    <!-- Review Section -->
-                    <h3 style="font-size: 1.875rem; font-weight: 800; color: var(--heading-color); border-bottom: 2px solid var(--primary-pink); padding-bottom: 0.5rem;">Review Your Answers</h3>
-                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                        ${questions.map((q, index) => {
-                            const isCorrect = getCorrectness(q, userAnswers[index]);
-                            return `
-                                <div class="review-item ${isCorrect ? 'correct' : 'incorrect'}">
-                                    <p class="review-question">Q${index + 1}: ${q.question}</p>
-                                    <p style="font-size: 0.875rem; font-weight: 500;">
-                                        Your Answer: <span class="${isCorrect ? 'review-answer-correct' : 'review-answer-incorrect'}">
-                                            ${userAnswers[index] || 'No Answer'}
-                                        </span>
-                                    </p>
-                                    ${!isCorrect ? `
-                                        <p style="font-size: 0.875rem; font-weight: 500; margin-top: 0.25rem;">
-                                            Correct Answer: <span style="color: #065f46; font-weight: 700;">${q.answer}</span>
-                                        </p>
-                                    ` : ''}
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                    
-                    <div style="padding-top: 1rem;">
-                        <button
-                            id="newQuizButton"
-                            class="btn btn-primary"
-                            style="width: 100%;"
-                        >
-                            Create New Quiz
-                        </button>
-                    </div>
+                    <div class="feedback-box"><h3>Gemini Feedback</h3><p>${feedback}</p></div>
+                    <button class="btn btn-primary" onclick="location.reload()">New Quiz</button>
                 </div>
             `;
-            document.getElementById('newQuizButton').addEventListener('click', handleNewQuiz);
         }
 
-        // --- Event Handlers ---
+        // Global functions for buttons
+        window.selectAnswer = (ans) => { userAnswers[currentQuestionIndex] = ans; renderApp(); };
+        window.nextQ = () => { if(currentQuestionIndex < questions.length - 1) currentQuestionIndex++; renderApp(); };
+        window.prevQ = () => { if(currentQuestionIndex > 0) currentQuestionIndex--; renderApp(); };
+        window.submitQuiz = async () => {
+            quizStatus = 'loading'; loadingMessage = 'Checking...'; renderApp();
+            score = questions.filter((q, i) => userAnswers[i] === q.answer).length;
+            feedback = await generateFeedback(score, questions.length, userAnswers);
+            quizStatus = 'results'; renderApp();
+        };
 
-        function handleTextChange(e) {
-            fileContentText = e.target.value;
-            // Clear file data if user starts typing manually
-            fileDataBase64 = null; 
-            fileMimeType = null;
-            pdfFileName = '';
-
-            document.getElementById('charCount').textContent = `${fileContentText.length} / 5000`;
-            renderApp();
-        }
-
-        function handleFileChange(e) {
+        async function handleFileChange(e) {
             const file = e.target.files[0];
-            const uploadFileNameSpan = document.getElementById('uploadFileName');
-
-            if (!file) {
-                fileDataBase64 = null;
-                fileMimeType = null;
-                pdfFileName = '';
-                uploadFileNameSpan.textContent = 'Choose File...';
-                renderApp();
-                return;
-            }
-            
-            error = null;
+            if (!file) return;
             pdfFileName = file.name;
-            uploadFileNameSpan.textContent = file.name;
-            
-            // Limit file size to 4MB (Gemini limit for inline data)
-            const MAX_SIZE_MB = 4;
-            if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-                error = `File size (${(file.size / (1024 * 1024)).toFixed(2)}MB) exceeds the ${MAX_SIZE_MB}MB limit for direct AI processing. Please use a smaller file or paste the text content manually.`;
-                fileDataBase64 = null;
-                fileMimeType = null;
-                quizStatus = 'config';
-                // Clear the file input element to allow re-selection
-                e.target.value = null; 
-                uploadFileNameSpan.textContent = 'Choose File...';
-                renderApp();
-                return;
-            }
-            
-            fileMimeType = file.type || 'application/octet-stream';
-
             const reader = new FileReader();
-
-            loadingMessage = `Reading and encoding file: ${file.name}...`;
-            quizStatus = 'loading';
-            renderApp();
-            
-            // Clear manual text if a file is uploaded
-            fileContentText = '';
-            
-            reader.onload = (event) => {
-                try {
-                    // Convert ArrayBuffer to Base64 string (mimicking server-side encoding)
-                    const base64String = btoa(
-                        new Uint8Array(event.target.result)
-                            .reduce((data, byte) => data + String.fromCharCode(byte), '')
-                    );
-                    
-                    fileDataBase64 = base64String;
-                    loadingMessage = '';
-                    quizStatus = 'config';
-                    error = null;
-                } catch (err) {
-                    console.error("Base64 encoding error:", err);
-                    error = "Failed to encode file data. Try pasting the content manually.";
-                    fileDataBase64 = null;
-                    fileMimeType = null;
-                    // Clear the file input element to allow re-selection
-                    e.target.value = null;
-                    uploadFileNameSpan.textContent = 'Choose File...';
-                }
-                renderApp(); 
-            };
-
-            reader.onerror = (error) => {
-                console.error("File reading error:", error);
-                error = `Failed to read file: ${error.message}.`;
-                fileDataBase64 = null;
-                fileMimeType = null;
-                loadingMessage = '';
-                quizStatus = 'config';
-                e.target.value = null; 
-                uploadFileNameSpan.textContent = 'Choose File...';
+            reader.onload = (ev) => {
+                fileDataBase64 = btoa(new Uint8Array(ev.target.result).reduce((data, b) => data + String.fromCharCode(b), ''));
+                fileMimeType = file.type;
                 renderApp();
             };
-            
-            // Read the file as binary ArrayBuffer
             reader.readAsArrayBuffer(file);
         }
 
-        function handleConfigChange(e) {
-            const { name, value } = e.target;
-            quizConfig[name] = name === 'numQuestions' ? parseInt(value) : value;
-        }
-
         async function handleGenerateQuiz() {
-            // Check if generation button should be enabled based on current state
-            const isContentReady = fileContentText.trim() || (fileDataBase64 && fileMimeType);
-
-            if (!isContentReady) {
-                error = "No content uploaded or pasted. Please provide study material.";
-                renderApp();
-                return;
-            }
-            
-            error = null;
-            loadingMessage = 'Generating questions and answers...';
-            quizStatus = 'loading';
-            renderApp();
-
+            quizStatus = 'loading'; loadingMessage = 'Generating...'; renderApp();
             try {
-                const generatedQuestions = await generateQuizContent();
-                
-                if (generatedQuestions.length === 0) {
-                     throw new Error("AI did not return any questions. Please check your content and try again.");
-                }
-
-                questions = generatedQuestions;
-                userAnswers = new Array(generatedQuestions.length).fill(null);
-                currentQuestionIndex = 0;
+                questions = await generateQuizContent();
+                userAnswers = new Array(questions.length).fill(null);
                 quizStatus = 'quiz';
-
-            } catch (err) {
-                console.error("Quiz generation error:", err);
-                error = `Failed to generate quiz: ${err.message}. Please check console for details.`;
-                quizStatus = 'config';
-            } finally {
-                loadingMessage = '';
-                renderApp();
-            }
-        }
-
-        function handleAnswerSelection(e) {
-            const button = e.target.closest('.quiz-option');
-            if (!button) return;
-
-            const answer = button.dataset.answer;
-            userAnswers[currentQuestionIndex] = answer;
+            } catch (e) { error = "Error generating quiz."; quizStatus = 'config'; }
             renderApp();
         }
 
-        function handleTextAnswerChange(e) {
-            userAnswers[currentQuestionIndex] = e.target.value;
-            // No full render here, only button state updated via separate listener on render
-        }
-
-        function handleNextQuestion() {
-            if (currentQuestionIndex < questions.length - 1) {
-                currentQuestionIndex++;
-                renderApp();
-            }
-        }
-
-        function handlePreviousQuestion() {
-            if (currentQuestionIndex > 0) {
-                currentQuestionIndex--;
-                renderApp();
-            }
-        }
-
-        async function handleSubmitQuiz() {
-            loadingMessage = 'Calculating score and generating personalized feedback...';
-            quizStatus = 'loading';
-            renderApp();
-            
-            // 1. Calculate Score
-            let correctCount = 0;
-            const totalQuestions = questions.length;
-            const finalAnswers = [...userAnswers];
-
-            questions.forEach((q, i) => {
-                const ua = finalAnswers[i];
-                let isCorrect = false;
-
-                if (q.type === 'enumeration' || q.type === 'identification') {
-                    // Case-insensitive, trim comparison for text inputs
-                    isCorrect = ua?.toLowerCase().trim() === q.answer.toLowerCase().trim();
-                } else {
-                    // Strict comparison for multiple choice
-                    isCorrect = ua === q.answer;
-                }
-
-                if (isCorrect) {
-                    correctCount++;
-                }
-            });
-            
-            score = correctCount;
-            
-            // 2. Generate Feedback
-            try {
-                feedback = await generateFeedback(score, totalQuestions, finalAnswers);
-            } catch (err) {
-                console.error("Feedback generation error:", err);
-                feedback = "Could not generate detailed AI feedback, but congratulations on finishing the quiz!";
-            } finally {
-                loadingMessage = '';
-                quizStatus = 'results';
-                renderApp();
-            }
-        }
-
-        function handleNewQuiz() {
-            quizStatus = 'config';
-            questions = [];
-            userAnswers = [];
-            score = 0;
-            feedback = '';
-            fileContentText = '';
-            fileDataBase64 = null;
-            fileMimeType = null;
-            pdfFileName = '';
-            renderApp();
-        }
-
-        // --- Initialization ---
-
-        function initApp() {
-            // Set a local UUID for user identification
-            userId = generateUUID();
-            renderApp(); // Initial render of the config screen
-        }
-
-        window.addEventListener('load', initApp);
+        function initApp() { userId = generateUUID(); renderApp(); }
+        window.addEventListener('load', loadApiKey);
     </script>
 </body>
 </html>
